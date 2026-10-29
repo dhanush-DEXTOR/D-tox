@@ -317,7 +317,7 @@ function plan(){
   '<div class="row"><button class="btn g" data-a="bk">'+(showBk?"Hide backup":"Show backup")+"</button></div>"+
   (showBk?'<textarea id="bkt" aria-label="Backup data" style="min-height:120px">'+esc(JSON.stringify(S))+'</textarea><div class="row"><button class="btn g" data-a="bkcopy">Copy</button><button class="btn" data-a="bkrestore">Restore from box</button></div>':"")+
   (rec?'<p class="hint">A copy of unreadable saved data was kept. Copy it here if you want to try repairing it.</p><textarea readonly aria-label="Recovered data" style="min-height:80px">'+esc(rec)+'</textarea>':"")+
-  '<div class="row"><button class="btn d" data-a="erase">Erase all data</button></div></div>';
+  '<div class="row"><button class="btn d" data-a="erase">Erase all data</button></div><div class="hint">D’tox version '+APP_VER+'</div></div>';
  return h}
 /* ===== steps, reminders, food, energy, weight ===== */
 const num=(v,d=0)=>{const x=parseFloat(v);return isFinite(x)?x:d};
@@ -325,7 +325,8 @@ const R=x=>Math.round(x);
 const MEALS=[["breakfast","Breakfast"],["lunch","Lunch"],["dinner","Dinner"],["snack","Snacks"]];
 const ACT=[["sed","Sedentary (little exercise)",1.2],["light","Lightly active (1–3 days/week)",1.375],["mod","Moderately active (3–5 days/week)",1.55],["very","Very active (6–7 days/week)",1.725],["extra","Extra active (hard training or physical job)",1.9]];
 const FOODS=[["Idli (steamed)",135,4,28,0.4,1,"idli",40],["Plain dosa",165,4,29,3.7,1,"dosa",90],["Chapati / roti",300,9,54,4,4,"chapati",40],["White rice, cooked",130,2.7,28,0.3,0.4,"cup",160],["Brown rice, cooked",112,2.3,23.5,0.8,1.8,"cup",160],["Sambar",55,3,8,1.5,2,"katori",150],["Dal, cooked",100,6.5,15,1.8,3.5,"katori",150],["Egg, boiled",155,12.6,1.1,10.6,0,"egg",50],["Chicken breast, cooked",165,31,0,3.6,0,"portion",120],["Chicken curry (home style)",140,14,4,8,1,"katori",150],["Fish, grilled or cooked",130,22,0,4,0,"fillet",100],["Paneer",265,18,1.2,21,0,"cube",25],["Curd / yogurt",61,3.5,4.7,3.3,0,"katori",150],["Milk, whole",61,3.2,4.8,3.3,0,"cup",240,"ml"],["Banana",89,1.1,23,0.3,2.6,"banana",118],["Apple",52,0.3,14,0.2,2.4,"apple",180],["Oats, dry",389,17,66,7,10.6,"serving",40],["Peanut butter",588,25,20,50,6,"tbsp",16],["Almonds",579,21,22,50,12.5,"almond",1.2],["Peanuts",567,26,16,49,8.5,"handful",30],["Cooking oil",884,0,0,100,0,"tbsp",14,"ml"],["Ghee",900,0,0,100,0,"tsp",5],["Whey protein powder",400,80,8,6,0,"scoop",30],["Sugar",387,0,100,0,0,"tsp",4],["Chicken biryani",190,9,24,6,1,"plate",300],["Upma",150,3.3,22,5.5,2,"katori",200],["Ven pongal",160,4,24,5,1,"katori",200],["Potato, boiled",87,1.9,20,0.1,1.8,"potato",150],["Chickpeas (chana), cooked",164,8.9,27,2.6,7.6,"katori",150],["Rajma, cooked",127,8.7,23,0.5,6.4,"katori",150],["Tofu",76,8,1.9,4.8,0.3,"block",100],["Bread, white",265,9,49,3.2,2.7,"slice",30],["Bread, whole wheat",252,12,43,3.5,7,"slice",30],["Coconut chutney",170,2,7,15,4,"tbsp",15],["Medu vada",250,8,25,13,4,"vada",40],["Parotta",320,7,45,12,2,"parotta",80],["Mixed vegetable salad",20,1,4,0.2,1.5,"bowl",150],["Idiyappam",130,2.5,28,0.6,1,"piece",30]];
-let fd=TK,fmeal="breakfast",fmode="ai",fqry="",fsel=-1,fq="1",fu="u",fai=[],faiTxt="",faiMsg="",faiBusy=false,fedit=null,fmsg="",fo={},wedit=null,wmsg="",pmsg="",ai=null;
+let fd=TK,fmeal="breakfast",fmode="ai",fqry="",fsel=-1,fq="1",fu="u",fai=[],faiTxt="",faiMsg="",faiBusy=false,fedit=null,fmsg="",fo={},wedit=null,wmsg="",pmsg="",ai=null,aiSet=false,aimsg="";
+let aiCfg=null;try{aiCfg=JSON.parse(localStorage.getItem("dtox-ai"))}catch(e){}
 const ents=dk=>S.food[dk]||[];
 const sumE=a=>a.reduce((s,e)=>({k:s.k+e.kcal,p:s.p+e.p,c:s.c+e.c,f:s.f+e.f,b:s.b+(e.fib||0)}),{k:0,p:0,c:0,f:0,b:0});
 function energy(){const q=S.profile,w=+q.weight,h=+q.height,a=+q.age;
@@ -375,19 +376,55 @@ function remCard(){const ok="Notification" in window,p=ok?Notification.permissio
  return'<div class="card"><div class="ch"><h2>Reminders</h2></div><p class="hint" style="margin-top:0">Give any task reminder times (a multi-step task can have one time per step). Reminders show on Today while D’tox is open'+(p==="granted"?", and as notifications where your browser allows them":"")+'. A web page can’t wake an iPhone when the app is closed, so for alerts you can’t miss, also set an iPhone alarm or Reminders item.</p>'+(ok&&p==="default"?'<div class="row"><button class="btn g" data-a="notif">Allow notifications</button></div>':"")+(ok&&p==="denied"?'<div class="hint">Notifications are blocked in your browser settings.</div>':"")+'</div>'}
 /* food UI */
 const bar=(p,c)=>'<div class="bar" style="--c:'+c+'"><i style="width:'+Math.min(100,Math.max(0,R(p)))+'%"></i></div>';
-function aiPane(){if(!ai)return'<p class="hint">AI estimates work when D’tox is opened inside Claude. Use List or Manual here.</p>';
- let h='<label class="fl" for="fait">What did you eat? Add amounts if you know them</label><textarea id="fait" data-f="ait" rows="3" placeholder="2 dosa with sambar and coconut chutney, 1 banana">'+esc(faiTxt)+'</textarea><div class="row"><button class="btn" data-a="faiGo"'+(faiBusy?" disabled":"")+'>'+(faiBusy?"Estimating…":"Estimate")+'</button></div>';
+const APP_VER="2026-10-29b",GEMINI_DEFAULTS=["gemini-3.5-flash-lite","gemini-3.8-flash","gemini-2.5-flash-lite"];
+function httpErr(st,d){const e=new Error("http "+st);e.status=st;e.detail=d||"";return e}
+async function aiCall(prompt){
+ if(ai)return await ai.json(prompt,{modelTier:"quick"});
+ const c=aiCfg;if(!c||!c.key){const e=new Error("nokey");e.code="nokey";throw e}
+ const post=async(url,headers,body)=>{const r=await fetch(url,{method:"POST",headers:{"content-type":"application/json",...headers},body:JSON.stringify(body)});
+  if(!r.ok){let m="";try{const j=await r.json();m=(j.error&&(j.error.message||j.error.status))||""}catch(x){}throw httpErr(r.status,m)}
+  return r.json()};
+ let txt="";
+ if(c.prov==="anthropic"){
+  const j=await post("https://api.anthropic.com/v1/messages",{"x-api-key":c.key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},{model:c.model||"claude-haiku-5-5",max_tokens:1500,messages:[{role:"user",content:prompt}]});
+  txt=(j.content||[]).map(b=>b.text||"").join("")}
+ else{
+  const models=c.model?[c.model]:GEMINI_DEFAULTS;let last=null;
+  for(const m of models){
+   try{const j=await post("https://generativelanguage.googleapis.com/v1beta/models/"+encodeURIComponent(m)+":generateContent",{"x-goog-api-key":c.key},{contents:[{parts:[{text:prompt}]}],generationConfig:{responseMimeType:"application/json"}});
+    txt=((((j.candidates||[])[0]||{}).content||{}).parts||[]).map(x=>x.text||"").join("");last=null;break}
+   catch(e){last=e;if([403,404,429,500,503].indexOf(e.status)<0)break}}
+  if(last)throw last}
+ const m2=txt.match(/\{[\s\S]*\}/);if(!m2)throw new Error("bad");return JSON.parse(m2[0])}
+function aiErr(e){if(e&&e.code==="not_granted")return"AI estimates need your permission. You can still use List or Manual.";
+ if(e&&e.code==="rate_limited")return"Too many requests. Wait a moment and try again.";
+ if(e&&e.code==="nokey")return"Add an AI key under AI settings first.";
+ const st=e&&e.status,d=e&&e.detail?" — "+String(e.detail).replace(/\s+/g," ").slice(0,160):"";
+ if(st===401||st===403)return"The provider rejected the key or this model ("+st+")"+d;
+ if(st===400)return"The provider didn’t accept the request or key (400)"+d;
+ if(st===404)return"That model isn’t available to your key (404)"+d+". Pick another model in AI settings.";
+ if(st===429)return"The free limit was reached (429). Wait a minute, or choose another model."+d;
+ if(st>=500)return"The AI service is busy ("+st+"). Try again shortly.";
+ if(e&&e.name==="TypeError")return"Couldn’t reach the AI service. Check your connection, or use List or Manual.";
+ if(e&&e.message==="bad")return"The AI replied in an unexpected format. Try again, or use List or Manual.";
+ return"The AI estimate failed. Use List or Manual instead."}
+function aiSettings(){const c=aiCfg||{prov:"gemini"};
+ return'<div class="hint" style="margin-top:0">Connect your own AI key. It is stored only in this browser, never in your backup or your GitHub repository, and the text you type is sent to the provider you choose.</div><div class="hint"><b>Gemini:</b> create a key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>. A Gemini Pro subscription covers the Gemini app, but Google bills API keys separately, with a free tier for light use (on the free tier Google may use prompts to improve its products). Pro models usually need billing turned on for the key. <b>Claude API:</b> paid account needed.</div><label class="fl" for="aip">Provider</label><select id="aip"><option value="gemini"'+(c.prov!=="anthropic"?" selected":"")+'>Google Gemini</option><option value="anthropic"'+(c.prov==="anthropic"?" selected":"")+'>Claude API (paid)</option></select><label class="fl" for="aik">API key</label><input type="password" id="aik" autocomplete="off" placeholder="Paste your key" value="'+esc(c.key||"")+'"><label class="fl" for="aim">Model (empty = automatic: tries several current Gemini models)</label><input type="text" id="aim" list="aiml" placeholder="automatic" value="'+esc(c.model||"")+'"><datalist id="aiml"><option value="gemini-3.5-flash-lite"><option value="gemini-3.8-flash"><option value="gemini-3.1-pro-preview"><option value="claude-haiku-5-5"><option value="claude-sonnet-5-5"></datalist><div class="row"><button class="btn" data-a="aisave">Save key</button><button class="btn g" data-a="aipro">Use Gemini Pro</button>'+(c.key?'<button class="btn g" data-a="aidel">Remove key</button>':'')+'</div>'+(aimsg?'<div class="err">'+esc(aimsg)+'</div>':'')}
+function aiPane(){const has=ai||(aiCfg&&aiCfg.key);let h="";
+ if(!ai&&(!has||aiSet))h+=aiSettings();
+ if(!has)return h;
+ h+='<label class="fl" for="fait">What did you eat? Add amounts if you know them</label><textarea id="fait" data-f="ait" rows="3" placeholder="2 dosa with sambar and coconut chutney, 1 banana">'+esc(faiTxt)+'</textarea><div class="row"><button class="btn" data-a="faiGo"'+(faiBusy?" disabled":"")+'>'+(faiBusy?"Estimating…":"Estimate")+'</button>'+(ai?"":'<button class="btn g" data-a="aiset">AI settings</button>')+'</div>';
  if(faiMsg)h+='<div class="err">'+esc(faiMsg)+'</div>';
  if(fai.length)h+=fai.map((x,i)=>'<div class="mrow"><span>'+esc(x.name)+'<small>'+esc(x.qty)+' · '+R(x.kcal)+' kcal · P '+x.p+' C '+x.c+' F '+x.f+(x.conf?' · '+esc(x.conf)+' confidence':'')+(x.as?'<br>'+esc(x.as):'')+'</small></span><button data-a="fairm" data-i="'+i+'" aria-label="Remove">✕</button></div>').join("")+'<div class="hint">AI estimates, not measured values. Check any amount that looks off.</div><div class="row"><button class="btn" data-a="faiAdd">Add all</button></div>';
  return h}
 async function aiEstimate(){faiMsg="";if(!faiTxt.trim()){faiMsg="Describe what you ate first.";render();return}
  faiBusy=true;fai=[];render();
  const prompt=["You are a careful nutrition estimator for a personal food diary.","The person ate the following (it may include Indian or Tamil home-cooked dishes, restaurant meals or packaged foods):","\""+faiTxt.trim().slice(0,600)+"\"","Split it into separate food items. If an amount is missing, assume a typical home portion and say so in assumption.","Use cooked values for cooked foods. Be realistic rather than optimistic. kcal should roughly equal 4*protein + 4*carbs + 9*fat. Do not invent micronutrients.","Reply with JSON only, in this shape:",'{"items":[{"name":"string","amount":"e.g. 2 dosa, about 180 g","kcal":0,"protein_g":0,"carbs_g":0,"fat_g":0,"fibre_g":0,"confidence":"low|medium|high","assumption":"short"}]}'].join("\n");
- try{const r=await ai.json(prompt,{modelTier:"quick"}),a=(r&&r.items)||[];
+ try{const r=await aiCall(prompt),a=(r&&r.items)||[];
   fai=a.map(x=>{const p=Math.max(0,num(x.protein_g)),c=Math.max(0,num(x.carbs_g)),f=Math.max(0,num(x.fat_g));let k=num(x.kcal);if(!(k>0))k=4*p+4*c+9*f;
    return{name:String(x.name||"Food").slice(0,60),qty:String(x.amount||"").slice(0,60),kcal:R(k),p:r1(p),c:r1(c),f:r1(f),fib:r1(Math.max(0,num(x.fibre_g))),conf:String(x.confidence||"").slice(0,12),as:String(x.assumption||"").slice(0,100),src:"ai"}});
   if(!fai.length)faiMsg="I couldn’t find foods in that description. Try listing items with amounts."}
- catch(e){faiMsg=e&&e.code==="not_granted"?"AI estimates need your permission. You can still use List or Manual.":e&&e.code==="rate_limited"?"Too many requests. Wait a moment and try again.":"The AI estimate failed. Use List or Manual instead."}
+ catch(e){faiMsg=aiErr(e)}
  faiBusy=false;if(tab===3)render()}
 function listRes(){const q=fqry.toLowerCase(),r=FOODS.map((f,i)=>[f,i]).filter(x=>!q||x[0][0].toLowerCase().includes(q)).slice(0,8);
  return r.length?r.map(x=>'<div class="mrow"><span>'+esc(x[0][0])+'<small>'+x[0][1]+' kcal per 100 '+(x[0][8]||"g")+'</small></span><button class="btn g" style="padding:6px 12px;min-height:36px;font-size:13px" data-a="fsel" data-i="'+x[1]+'">Select</button></div>').join(""):'<div class="empty">No match in the starter list. Try Manual or AI.</div>'}
@@ -480,6 +517,12 @@ document.addEventListener("click",e=>{const t=e.target.closest("[data-a]");if(!t
  case"wedit":wedit=id;fo.wt=true;wmsg="";render();break;
  case"wcancel":wedit=null;wmsg="";render();break;
  case"wdel":if(confirm("Delete this weight entry?")){S.weights=S.weights.filter(q=>q.id!==id);if(wedit===id)wedit=null;syncW();save();render()}break;
+ case"aiset":aiSet=!aiSet;aimsg="";render();break;
+ case"aipro":{const m=document.getElementById("aim"),q=document.getElementById("aip");if(m)m.value="gemini-3.1-pro-preview";if(q)q.value="gemini";break}
+ case"aisave":{const key=g("aik");if(!key){aimsg="Paste your API key first.";render();break}
+  aiCfg={prov:g("aip")==="anthropic"?"anthropic":"gemini",key,model:g("aim")};aimsg="";aiSet=false;faiMsg="";
+  try{localStorage.setItem("dtox-ai",JSON.stringify(aiCfg))}catch(x){aimsg="The key is active for now but could not be saved on this device."}render();break}
+ case"aidel":aiCfg=null;aiSet=false;aimsg="";try{localStorage.removeItem("dtox-ai")}catch(x){}render();break;
  case"psave":{const q={sex:g("ps"),age:num(g("pa")),height:num(g("ph")),weight:num(g("pw"))};
   if((q.age&&(q.age<14||q.age>100))||(q.height&&(q.height<100||q.height>230))||(q.weight&&(q.weight<25||q.weight>300))){pmsg="Please check age (14–100), height (100–230 cm) and weight (25–300 kg).";fo.pf=true;render();break}
   pmsg="";Object.assign(S.profile,q,{act:g("pact")||"sed",deficit:num(g("pd"),400),adj:num(g("padj")),pkg:num(g("pk"),1.8),goal:num(g("pg"))});fo.pf=true;save();render();break}
